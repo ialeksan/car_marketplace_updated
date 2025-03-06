@@ -1,8 +1,10 @@
 // client/src/pages/ListingDetails.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import ImageModal from '../components/ImageModal';
+import { makeOffer, fetchOffers } from '../api/offers';
+import { AuthContext } from '../context/AuthContext';
 
 function ListingDetails() {
   const { id } = useParams();
@@ -10,9 +12,13 @@ function ListingDetails() {
   const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [offerFormVisible, setOfferFormVisible] = useState(false);
+  const [offerAmount, setOfferAmount] = useState("");
+  const [offers, setOffers] = useState([]);
+  const { user } = useContext(AuthContext);
 
   useEffect(() => {
-    const fetchListing = async () => {
+    const fetchListingDetails = async () => {
       try {
         const response = await axios.get(`http://localhost:5000/api/listings/${id}`);
         setListing(response.data);
@@ -21,11 +27,18 @@ function ListingDetails() {
         setError('Error fetching listing details.');
       }
     };
-    fetchListing();
+    fetchListingDetails();
+    loadOffers();
   }, [id]);
 
-  if (error) return <div>{error}</div>;
-  if (!listing) return <div>Loading...</div>;
+  const loadOffers = async () => {
+    try {
+      const data = await fetchOffers(id);
+      setOffers(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const openModal = (index) => {
     setCurrentImageIndex(index);
@@ -47,6 +60,43 @@ function ListingDetails() {
       prevIndex === listing.images.length - 1 ? 0 : prevIndex + 1
     );
   };
+
+  const handleBuyItNow = () => {
+    alert(`Buying listing for $${listing.price}`);
+    // Add further purchase logic as needed.
+  };
+
+  const toggleOfferForm = () => {
+    setOfferFormVisible(!offerFormVisible);
+  };
+
+  const handleMakeOffer = async () => {
+    if (!user) {
+      alert("Please log in to make an offer");
+      return;
+    }
+    if (!offerAmount || isNaN(offerAmount)) {
+      alert("Enter a valid offer amount");
+      return;
+    }
+    try {
+      const offerData = {
+        listing_id: id,
+        user_id: user.id,
+        offer_amount: parseFloat(offerAmount)
+      };
+      await makeOffer(offerData);
+      alert("Offer submitted successfully");
+      setOfferAmount("");
+      loadOffers();
+    } catch (err) {
+      console.error(err);
+      alert("Error making offer");
+    }
+  };
+
+  if (error) return <div>{error}</div>;
+  if (!listing) return <div>Loading...</div>;
 
   return (
     <div>
@@ -85,6 +135,51 @@ function ListingDetails() {
           onPrev={showPrevImage}
           onNext={showNextImage}
         />
+      )}
+      {/* Buy It Now and Make Offer Buttons */}
+      <div style={{ marginTop: '10px' }}>
+        <button onClick={handleBuyItNow}>
+          Buy It Now for ${listing.price}
+        </button>{' '}
+        <button onClick={toggleOfferForm}>
+          Make an Offer
+        </button>
+      </div>
+      {/* Offer form */}
+      {offerFormVisible && (
+        <div style={{ marginTop: '10px' }}>
+          <input
+            type="number"
+            placeholder="Offer amount"
+            value={offerAmount}
+            onChange={(e) => setOfferAmount(e.target.value)}
+          />
+          <button onClick={handleMakeOffer}>Submit Offer</button>
+        </div>
+      )}
+      {/* Offers Table (only on the Listing Details page) */}
+      {offers && offers.length > 0 && (
+        <div style={{ marginTop: '20px', textAlign: 'center' }}>
+          <h3 style={{ textAlign: 'center' }}>Offers Made</h3>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={{ border: '1px solid black', padding: '5px', textAlign: 'center' }}>User Email</th>
+                <th style={{ border: '1px solid black', padding: '5px', textAlign: 'center' }}>Offer Amount</th>
+                <th style={{ border: '1px solid black', padding: '5px', textAlign: 'center' }}>Date Made</th>
+              </tr>
+            </thead>
+            <tbody>
+              {offers.map(offer => (
+                <tr key={offer.id}>
+                  <td style={{ border: '1px solid black', padding: '5px', textAlign: 'center' }}>{offer.user_email}</td>
+                  <td style={{ border: '1px solid black', padding: '5px', textAlign: 'center' }}>${offer.offer_amount}</td>
+                  <td style={{ border: '1px solid black', padding: '5px', textAlign: 'center' }}>{offer.date_made}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

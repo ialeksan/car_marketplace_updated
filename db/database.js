@@ -25,6 +25,19 @@ db.serialize(() => {
     )
   `);
 
+    // Create OFFERS table if it doesn't exist
+  db.run(`
+    CREATE TABLE IF NOT EXISTS offers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      listing_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      offer_amount REAL NOT NULL,
+      date_made DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (listing_id) REFERENCES car_listings(id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
   // CAR LISTINGS table
   db.run(`
     CREATE TABLE IF NOT EXISTS car_listings (

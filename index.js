@@ -6,6 +6,7 @@ const db = require('./db/database');
 // Import routes
 const authRoutes = require('./routes/auth');
 const listingsRoutes = require('./routes/listings');
+const offersRoutes = require('./routes/offers');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -18,6 +19,7 @@ app.use(express.json());  // Parse JSON request bodies
 app.use('/api/auth', authRoutes);
 app.use('/api/listings', listingsRoutes);
 app.use('/uploads', express.static('uploads'));
+app.use('/api/offers', offersRoutes);
 
 // Test route to confirm server is running
 app.get('/', (req, res) => {
